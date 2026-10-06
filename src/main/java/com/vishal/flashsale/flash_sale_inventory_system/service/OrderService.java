@@ -77,6 +77,15 @@ public class OrderService {
                 }
 
                 // Atomic conditional decrement — avoids overselling under concurrency
+                // A flash-sale order consumes physical product stock as well as the
+                // sale allocation. Both conditional updates participate in this
+                // transaction, so a failure in either one rolls back the other.
+                int updatedProductRows = productRepository.stockUpdate(productId, quantityGivenByUser);
+
+                if (updatedProductRows == 0) {
+                    throw new OutOfStockException("Insufficient stock for product " + productId);
+                }
+
                 int updatedRows = flashSaleRepository.stockUpdate(fs.getId(), quantityGivenByUser);
 
                 if(updatedRows == 0){
